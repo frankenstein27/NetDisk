@@ -1,7 +1,8 @@
 #include "../../include/epollmanager.h"
 
-EpollManager::EpollManager(bool enable_et) : enable_et_(enable_et),
-                                             running_(false)
+EpollManager::EpollManager(bool enable_et) : 
+    enable_et_(enable_et),
+    running_(false)
 {
     logger_ = spdlog::get("logger");
     config_loader_ = ConfigLoader::GetInstance();
