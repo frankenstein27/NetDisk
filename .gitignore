@@ -1,0 +1,15 @@
+# ===== 基础忽略 =====
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+netdisk.out
+logs/*.log
+Makefile
+
+# ===== IDE 配置 =====
+# .vscode/
+
+# ===== 补充常见项 =====
+build/
+*.o
+*.swp

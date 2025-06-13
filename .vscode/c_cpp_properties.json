@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/src/db/",
+                "${workspaceFolder}/src/server/",
+                "${workspaceFolder}/src/storage/",
+                "${workspaceFolder}/src/threadpool/",
+                "${workspaceFolder}/src/timer/",
+                "${workspaceFolder}/src/utils/",
+                "${workspaceFolder}/src/"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
