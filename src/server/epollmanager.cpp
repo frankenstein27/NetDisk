@@ -154,7 +154,7 @@ void EpollManager::InitServer(int port, std::string ip)
     if (-1 == bind(listen_fd_, (const sockaddr *)&address_, addr_size))
         assert(-1 != ret);
 
-    // 开始监听
+    // 开始监听 
     ret = listen(listen_fd_, BACKLOG);
     assert(-1 != ret);
 }

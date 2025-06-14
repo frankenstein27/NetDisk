@@ -14,5 +14,5 @@ public:
     void ReleaseConnection(Connection *conn);
 
 private:
-    std::vector<Connection *> pool;
+    std::vector<Connection *> pool_;
 };

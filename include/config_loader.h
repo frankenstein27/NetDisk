@@ -10,7 +10,6 @@
 #include <pwd.h>
 #include <sys/stat.h>
 
-
 #define READ_MAX_SIZE 256
 
 class ConfigLoader
@@ -39,5 +38,5 @@ private:
     // 保证多线程状态下只执行一次
     static std::once_flag init_flag_;
     // 日志
-    std::shared_ptr<spdlog::logger> global_logger;
+    std::shared_ptr<spdlog::logger> global_logger_;
 };

@@ -1,13 +1,12 @@
 #include "../../include/config_loader.h"
 
-
 // 必须初始化静态成员变量
 ConfigLoader *ConfigLoader::p_configloader_ = nullptr;
 std::once_flag ConfigLoader::init_flag_;
 
 ConfigLoader::ConfigLoader()
 {
-    global_logger = spdlog::get("logger");
+    global_logger_ = spdlog::get("logger");
     LoadConfig();
 }
 
@@ -23,36 +22,36 @@ void ConfigLoader::LoadConfig()
     {
         if (errno == ENOENT)
         {
-            global_logger->warn("config file does not exist.Create it and initialize.");
+            global_logger_->warn("config file does not exist.Create it and initialize.");
             config_file.open(con_path + "/netdisk.ini", std::ios::in | std::ios::out);
             if (!config_file.is_open())
             {
-                global_logger->error("open config file failed.");
+                global_logger_->error("open config file failed.");
                 return;
             }
             else
             {
-                global_logger->trace("create config file success.");
+                global_logger_->trace("create config file success.");
                 // 写入初始配置
                 config_file.seekp(0L, std::ios::beg);
             }
         }
         else if (errno == EACCES)
         {
-            global_logger->error("Insufficient permissions. Please set the file permissions: ~/.config/HeBo/netdisk.ini");
+            global_logger_->error("Insufficient permissions. Please set the file permissions: ~/.config/HeBo/netdisk.ini");
             return;
         }
         else
         {
-            global_logger->error("Unknown error.");
+            global_logger_->error("Unknown error.");
             return;
         }
     }
 
-    std::string line,cur_section;
+    std::string line, cur_section;
     while (std::getline(config_file, line))
     {
-        if (line.empty() || line[0] == '#' || line[0] == ';')       // 跳过注释
+        if (line.empty() || line[0] == '#' || line[0] == ';') // 跳过注释
             continue;
         line = line.substr(0, line.find(';') - 1);
         line = line.substr(0, line.find('#') - 1);
@@ -61,10 +60,10 @@ void ConfigLoader::LoadConfig()
         {
             cur_section = line.substr(1, line.find(']') - 1);
         }
-        else                                                        // 处理键值对的配置：port=8080
+        else // 处理键值对的配置：port=8080
         {
             size_t pos = line.find('=');
-            if(pos != std::string::npos)
+            if (pos != std::string::npos)
             {
                 std::string key = line.substr(0, pos);
                 std::string value = line.substr(pos + 1);
@@ -72,7 +71,7 @@ void ConfigLoader::LoadConfig()
             }
             else
             {
-                global_logger->error("config file has a format error.");
+                global_logger_->error("config file has a format error.");
                 return;
             }
         }
