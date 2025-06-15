@@ -25,6 +25,8 @@ public:
     ssize_t ReadData();
     ssize_t SendData(const char *data, size_t len);
 
+    void Reset();
+
     // Data dispose result
     enum class Status
     {

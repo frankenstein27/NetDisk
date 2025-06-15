@@ -11,6 +11,8 @@ EpollManager::EpollManager(bool enable_et) :
     std::string ip = config_loader_->GetString("network.server_ip");
     logger_->trace("Init EpollManager successfully!Server port is: " + std::to_string(port) + ".And Server ip is: " + ip);
 
+    conn_pool_ = new ConnectionPool();
+
     InitServer(port, ip);
     InitEpoll();
     WaitEvents();
@@ -27,7 +29,8 @@ void EpollManager::AddSocked(int fd, sockaddr_in& addr, bool one_shot)
     if (one_shot)
     {
         // 只有连接 socket 才需要 oneshot 和 Connection 对象
-        Connection *conn = new Connection(fd, addr);
+        Connection *conn = conn_pool_->GetConnection();
+        conn->InitConnection(fd, addr);
         connections_[fd] = conn;
         event.events |= EPOLLONESHOT;
         logger_->trace("New Connection: " + conn->GetRemoteIp() + ":" + std::to_string(conn->GetRemotePort()));
@@ -41,7 +44,7 @@ void EpollManager::RemoveSocket(int fd)
     std::unordered_map<int, Connection *>::iterator it = connections_.find(fd);
     if(it != connections_.end())
     {
-        delete it->second;
+        conn_pool_->ReleaseConnection(it->second);
         connections_.erase(it);
     }
     epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
@@ -188,5 +191,6 @@ int EpollManager::SetNonblocking(int fd)
 
 EpollManager::~EpollManager()
 {
+    delete conn_pool_;
     running_ = false;
 }

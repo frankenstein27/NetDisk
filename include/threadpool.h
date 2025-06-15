@@ -13,4 +13,5 @@ public:
 
 private:
     int thread_count_;
+    std::mutex mtx_;
 };

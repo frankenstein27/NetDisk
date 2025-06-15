@@ -1,5 +1,5 @@
 #pragma once
-#include <vector>
+#include <queue>
 
 #include "./connection.h"
 
@@ -14,5 +14,9 @@ public:
     void ReleaseConnection(Connection *conn);
 
 private:
-    std::vector<Connection *> pool_;
+
+    int connection_count_;
+    std::queue<Connection *> pool_;
+    std::mutex mtx_;
+    std::condition_variable cv_;
 };

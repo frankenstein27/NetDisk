@@ -14,7 +14,6 @@ Logger::Logger()
         }
     }
     std::string all_path = std::string(path) + "/logs/netdisk.log";
-    std::cout << "all_path: " + all_path << std::endl;
     logger_ = spdlog::rotating_logger_mt("logger", all_path, max_size, file_size);
     logger_->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
     logger_->set_level(spdlog::level::trace);

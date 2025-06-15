@@ -7,13 +7,13 @@ Connection::Connection()
 {
     if (!logger_)
         logger_ = spdlog::get("logger");
+    recv_buf_ = new char[BUFFER_SIZE];
+    send_buf_ = new char[BUFFER_SIZE];
 }
 
 Connection::Connection(int sockfd, const sockaddr_in &client_addr)
     : sockfd_(sockfd)
 {
-    if(!logger_)
-        logger_ = spdlog::get("logger");
     // 设置非阻塞
     SetNoblocking();
     // 获取 ip port
@@ -23,15 +23,11 @@ Connection::Connection(int sockfd, const sockaddr_in &client_addr)
     remote_port_ = ntohs(client_addr.sin_port);
     // 初始化收发缓冲区和活跃时间
     last_active_ = time(nullptr);
-    recv_buf_ = new char[BUFFER_SIZE];
-    send_buf_ = new char[BUFFER_SIZE];
     status_ = Status::WAIT;
 }
 
 void Connection::InitConnection(int sockfd, const sockaddr_in& client_addr)
 {
-    if (!logger_)
-        logger_ = spdlog::get("logger");
     sockfd_ = sockfd;
     SetNoblocking();
     char ip_str[INET_ADDRSTRLEN];
@@ -39,8 +35,7 @@ void Connection::InitConnection(int sockfd, const sockaddr_in& client_addr)
     remote_ip_ = ip_str;
     remote_port_ = ntohs(client_addr.sin_port);
     last_active_ = time(nullptr);
-    recv_buf_ = new char[BUFFER_SIZE];
-    send_buf_ = new char[BUFFER_SIZE];
+    status_ = Status::WAIT;
 }
 
 const int Connection::GetSocket()
@@ -100,6 +95,18 @@ ssize_t Connection::SendData(const char *data, size_t len)
 const Connection::Status Connection::GetStatus()
 {
     return status_;
+}
+
+
+void Connection::Reset()
+{
+    status_ = Status::WAIT;
+    sockfd_ = -1;
+    remote_ip_ = "";
+    remote_port_ = -1;
+    last_active_ = -1;
+    memset(recv_buf_, '\0', BUFFER_SIZE);
+    memset(send_buf_, '\0', BUFFER_SIZE);
 }
 
 int Connection::SetNoblocking()

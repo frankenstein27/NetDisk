@@ -10,9 +10,9 @@
 #include <stdio.h>
 #include <unordered_map>
 #include <iostream>
-#include "./connection.h"
 #include "./config_loader.h"
 #include "./logger.h"
+#include "./connectionpool.h"
 
 #define MAX_EVENT_NUMBER 1024
 #define BACKLOG 5
@@ -45,6 +45,7 @@ private:
     int epoll_fd_;
     epoll_event events_[MAX_EVENT_NUMBER];
     std::unordered_map<int, Connection *> connections_;
+    ConnectionPool* conn_pool_;
     bool enable_et_;
     bool running_;
 };
