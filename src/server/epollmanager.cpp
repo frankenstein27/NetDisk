@@ -16,21 +16,34 @@ EpollManager::EpollManager(bool enable_et) :
     WaitEvents();
 }
 
-void EpollManager::AddSocked(int fd, bool one_shot)
+void EpollManager::AddSocked(int fd, sockaddr_in& addr, bool one_shot)
 {
+    // 如果是监听 socket ，不设置 oneshot 且无需创建 Connection对象
     epoll_event event;
     event.data.fd = fd;
     event.events = EPOLLIN;
     if (enable_et_)
         event.events |= EPOLLET;
     if (one_shot)
+    {
+        // 只有连接 socket 才需要 oneshot 和 Connection 对象
+        Connection *conn = new Connection(fd, addr);
+        connections_[fd] = conn;
         event.events |= EPOLLONESHOT;
+        logger_->trace("New Connection: " + conn->GetRemoteIp() + ":" + std::to_string(conn->GetRemotePort()));
+    }
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &event);
-    SetNonblocking(fd);
 }
 
 void EpollManager::RemoveSocket(int fd)
 {
+    // auto it = connections_.find(fd);
+    std::unordered_map<int, Connection *>::iterator it = connections_.find(fd);
+    if(it != connections_.end())
+    {
+        delete it->second;
+        connections_.erase(it);
+    }
     epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
 }
 
@@ -52,7 +65,6 @@ void EpollManager::WaitEvents()
 
 void EpollManager::ETWorkingMode(int active_number)
 {
-    char buf[BUFFER_SIZE];
     // 循环处理每个连接
     for (int i = 0; i < active_number; i++)
     {
@@ -71,44 +83,40 @@ void EpollManager::ETWorkingMode(int active_number)
             }
             else
             {
-                char tmp[256];
-                logger_->trace("accept a new connection with ip: " + std::string(inet_ntop(AF_INET, &client_address.sin_addr, tmp, INET_ADDRSTRLEN)) + " and port: " + std::to_string(ntohs(client_address.sin_port)));
-                AddSocked(connfd, true);
+                AddSocked(connfd, client_address, true);
             }
         }
         // 有可读事件
         else if (events_[i].events & EPOLLIN)
         {
-            logger_->trace("event trigger once");
-            while (1)
+            Connection *conn = connections_[sockfd];
+            while (true)
             {
-                memset(buf, '\0', BUFFER_SIZE);
-                int ret = recv(sockfd, buf, BUFFER_SIZE - 1, 0);
-                if (ret < 0)
+                ssize_t ret = conn->ReadData();
+                // 获取读取数据结果
+                Connection::Status status = conn->GetStatus();
+                
+                if(status == Connection::Status::ERROR)
                 {
-                    // 数据已经全部读取完(或者还没有实际的数据来)，如果以后接到数据，epoll 就能再次触发 sockfd 上的 EPOLLIN 事件，以驱动下一次读操作
-                    if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
-                    {
-                        ResetOneShot(sockfd);
-                        logger_->info("read later.");
-                        break;
-                    }
                     RemoveSocket(sockfd);
-                    close(sockfd);
                     break;
                 }
-                // 对方关闭连接
-                else if (ret == 0)
+                else if(status == Connection::Status::WAIT)
                 {
+                    ResetOneShot(sockfd);
+                    break;
+                }
+                else if(status == Connection::Status::CLOSED)
+                {
+                    // 对方关闭连接
                     RemoveSocket(sockfd);
                     logger_->info("A connection is shutdown.");
-                    close(sockfd);
+                    break;
                 }
-                // 读取数据
-                else
+                else if(status == Connection::Status::OK)
                 {
-                    logger_->info("Get " + std::to_string(ret) + " bytes of content: " + std::string(buf));
-                    printf("Get %d bytes of content: %s\n", ret, buf);
+                    // 读取数据
+                    logger_->info("recv message: " + conn->GetRecvBuf());
                 }
             }
         }
@@ -124,8 +132,8 @@ void EpollManager::InitEpoll()
 {
     // 创建 epoll 实例，得到其在内核事件表中的标识符（epoll_fd_）
     epoll_fd_ = epoll_create(1);
-    // 将当前服务器监听的文件描述符加入到内核事件表中，且设置为ET模式、非阻塞IO
-    AddSocked(listen_fd_, false);
+    // 将当前服务器监听的文件描述符加入到内核事件表中，且设置为ET模式、非阻塞IO，且不开启EPOLLONESHOT 模式
+    AddSocked(listen_fd_, address_,false);
     running_ = true;
 }
 

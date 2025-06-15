@@ -8,14 +8,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 #include "./connection.h"
 #include "./config_loader.h"
 #include "./logger.h"
 
 #define MAX_EVENT_NUMBER 1024
-#define BUFFER_SIZE 10
 #define BACKLOG 5
 
 #define DEBUG true
@@ -27,7 +26,7 @@ public:
     ~EpollManager();
 
     // event 指定事件类型，一般为EPOLLIN (+ EPOLLET)
-    void AddSocked(int fd, bool one_shot);
+    void AddSocked(int fd, sockaddr_in& addr, bool one_shot);
     void ResetOneShot(int fd);
     void RemoveSocket(int fd);
     void ETWorkingMode(int active_number);
@@ -42,9 +41,10 @@ private:
     int listen_fd_;
     ConfigLoader *config_loader_;
     std::shared_ptr<spdlog::logger> logger_;
+    // 可以考虑拆分为一个主 Epoll 和 多个工作线程的 Epoll
     int epoll_fd_;
     epoll_event events_[MAX_EVENT_NUMBER];
-    std::map<int, Connection *> connections_;
+    std::unordered_map<int, Connection *> connections_;
     bool enable_et_;
     bool running_;
 };
