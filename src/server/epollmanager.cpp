@@ -1,54 +1,18 @@
 #include "../../include/epollmanager.h"
 
-EpollManager::EpollManager(bool enable_et) : 
-    enable_et_(enable_et),
-    running_(false)
+EpollManager::EpollManager(bool enable_et, std::string ip, uint16_t port, ThreadPool& thread_pool)
+ :  enable_et_(enable_et),
+    running_(false),
+    thread_pool_(thread_pool)
 {
     logger_ = spdlog::get("logger");
-    config_loader_ = ConfigLoader::GetInstance();
-    // 通过配置文件获取 ip 和 port
-    int port = config_loader_->GetInt("network.port");
-    std::string ip = config_loader_->GetString("network.server_ip");
     logger_->trace("Init EpollManager successfully!Server port is: " + std::to_string(port) + ".And Server ip is: " + ip);
-
-    conn_pool_ = new ConnectionPool();
 
     InitServer(port, ip);
     InitEpoll();
     WaitEvents();
 }
 
-void EpollManager::AddSocked(int fd, sockaddr_in& addr, bool one_shot)
-{
-    // 如果是监听 socket ，不设置 oneshot 且无需创建 Connection对象
-    epoll_event event;
-    event.data.fd = fd;
-    event.events = EPOLLIN;
-    if (enable_et_)
-        event.events |= EPOLLET;
-    if (one_shot)
-    {
-        // 只有连接 socket 才需要 oneshot 和 Connection 对象
-        Connection *conn = conn_pool_->GetConnection();
-        conn->InitConnection(fd, addr);
-        connections_[fd] = conn;
-        event.events |= EPOLLONESHOT;
-        logger_->trace("New Connection: " + conn->GetRemoteIp() + ":" + std::to_string(conn->GetRemotePort()));
-    }
-    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &event);
-}
-
-void EpollManager::RemoveSocket(int fd)
-{
-    // auto it = connections_.find(fd);
-    std::unordered_map<int, Connection *>::iterator it = connections_.find(fd);
-    if(it != connections_.end())
-    {
-        conn_pool_->ReleaseConnection(it->second);
-        connections_.erase(it);
-    }
-    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
-}
 
 void EpollManager::WaitEvents()
 {
@@ -76,20 +40,11 @@ void EpollManager::ETWorkingMode(int active_number)
         // 有新连接请求
         if (sockfd == listen_fd_)
         {
-            struct sockaddr_in client_address;
-            socklen_t client_addrlength = sizeof(client_address);
-            int connfd = accept(listen_fd_, (sockaddr *)&client_address, &client_addrlength);
-            if (connfd < 0)
-            {
-                logger_->warn("connection error: " + std::string(strerror(errno)));
-                continue;
-            }
-            else
-            {
-                AddSocked(connfd, client_address, true);
-            }
+            HandleNewConnection(sockfd);
+            continue;
         }
-        // 有可读事件
+        // 有可读事件（如下内容在完成之后应该由子线程处理）
+        /*
         else if (events_[i].events & EPOLLIN)
         {
             Connection *conn = connections_[sockfd];
@@ -123,12 +78,40 @@ void EpollManager::ETWorkingMode(int active_number)
                 }
             }
         }
+        */
+    }
+}
+// 处理新连接
+void EpollManager::HandleNewConnection(int sockfd)
+{
+    // ET 模式需要循环 accept
+    while (true)
+    {
+        struct sockaddr_in client_address;
+        socklen_t client_addrlen = sizeof(client_address);
+        int connfd = accept(listen_fd_, (sockaddr *)&client_address, &client_addrlen);
+        if (-1 == connfd)
+        {
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
+            else
+            {
+                logger_->warn("connection error: " + std::string(strerror(errno)));
+                continue;
+            }
+        }
         else
         {
-            RemoveSocket(sockfd);
-            logger_->error("something else happened.");
+            SetNonblocking(connfd);
+            // 将 connfd 和 client_address 传给工作线程即可
+            thread_pool_.EnqueueTask([]()
+            {
+                // 如何实现？？？
+            });
         }
     }
+    
+
 }
 
 void EpollManager::InitEpoll()
@@ -136,7 +119,7 @@ void EpollManager::InitEpoll()
     // 创建 epoll 实例，得到其在内核事件表中的标识符（epoll_fd_）
     epoll_fd_ = epoll_create(1);
     // 将当前服务器监听的文件描述符加入到内核事件表中，且设置为ET模式、非阻塞IO，且不开启EPOLLONESHOT 模式
-    AddSocked(listen_fd_, address_,false);
+    AddSocked(listen_fd_, address_);
     running_ = true;
 }
 
@@ -170,6 +153,24 @@ void EpollManager::InitServer(int port, std::string ip)
     assert(-1 != ret);
 }
 
+
+void EpollManager::AddSocked(int fd, sockaddr_in& addr)
+{
+    SetNonblocking(fd);
+    // 如果是监听 socket ，不设置 oneshot 且无需创建 Connection对象
+    epoll_event event;
+    event.data.fd = fd;
+    event.events = EPOLLIN;
+    if (enable_et_)
+        event.events |= EPOLLET;
+    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &event);
+}
+
+void EpollManager::RemoveSocket(int fd)
+{
+    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
+}
+
 void EpollManager::ResetOneShot(int fd)
 {
     epoll_event event;
@@ -191,6 +192,5 @@ int EpollManager::SetNonblocking(int fd)
 
 EpollManager::~EpollManager()
 {
-    delete conn_pool_;
     running_ = false;
 }

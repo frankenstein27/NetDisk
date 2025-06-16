@@ -1,5 +1,6 @@
 #pragma once
 #include <queue>
+#include <mutex>
 
 #include "./connection.h"
 
@@ -7,7 +8,7 @@
 class ConnectionPool
 {
 public:
-    ConnectionPool();
+    ConnectionPool(int connecion_count);
     ~ConnectionPool();
 
     Connection *GetConnection();

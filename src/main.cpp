@@ -7,29 +7,37 @@
 #include "../include/threadpool.h"
 #include "../include/epollmanager.h"
 
+
 int main(int argc, char *argv[])
 {
     // 日志初始化
     Logger *logger = new Logger();
     std::shared_ptr<spdlog::logger> global_logger = spdlog::get("logger");
-    if (global_logger)
-    {
-        try
-        {
-            global_logger->trace("this is a test context");
-        }
-        catch(const std::exception& e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-    }
 
     // 配置文件初始化
     ConfigLoader *config_loader = ConfigLoader::GetInstance();
+    // 通过配置文件获取 连接池数量(线程数)和每个连接池大小
+    // 创建 conn_count 个连接池，每个连接池中有 conn_size 个连接实例
+    int conn_count = 5, conn_size = 20;
+    std::vector<ConnectionPool> conn_pool;
+    // 不在此处创建对象，每启动一个线程创建一个对象
+    for (ssize_t i = 0; i < conn_count; ++i)
+    {
+        conn_pool.emplace_back(ConnectionPool(conn_size));
+    }
+    
 
+    // 通过配置文件获取线程数(连接池数量) 以及最大任务队列大小 0表示无限制
+    int max_tasks_size = 100;
+    ThreadPool thread_pool(conn_count, max_tasks_size, conn_pool);
+
+    // 通过配置文件获取 ip 和 port
+    int port = config_loader->GetInt("network.port");
+    std::string ip = config_loader->GetString("network.server_ip");
     // 参数代表是否启用 ET 模式，此处启用
-    EpollManager *epoll_manager = new EpollManager(true);
+    EpollManager *epoll_manager = new EpollManager(true, ip, port, thread_pool);
     epoll_manager->WaitEvents();
+
 
     delete logger;
     delete config_loader;

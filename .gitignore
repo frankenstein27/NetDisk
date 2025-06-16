@@ -5,6 +5,7 @@ CMakeCache.txt
 netdisk.out
 logs/*.log
 Makefile
+client_test/*
 
 # ===== IDE 配置 =====
 # .vscode/

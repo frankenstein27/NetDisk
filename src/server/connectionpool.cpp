@@ -1,8 +1,8 @@
 #include "../../include/connectionpool.h"
 
-ConnectionPool::ConnectionPool()
+ConnectionPool::ConnectionPool(int connection_count)
+    : connection_count_(connection_count)
 {
-    connection_count_ = 100;
     for (int i = 0; i < connection_count_; i++)
     {
         Connection *conn = new Connection();
