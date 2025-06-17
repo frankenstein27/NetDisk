@@ -7,7 +7,7 @@
 class ThreadPool
 {
 public:
-    ThreadPool(int thread_count, int max_tasks_size, std::vector<ConnectionPool> conn_pool);
+    ThreadPool(int thread_count, int max_tasks_size, std::vector<ConnectionPool*> conn_pools);
     ~ThreadPool();
 
     // 禁止拷贝构造函数和赋值符号
@@ -37,7 +37,7 @@ public:
                 [thread_task = std::forward<F>(task)](int thread_id, ConnectionPool &pool)
                 {
                     // 调用任务并传递连接池引用
-                    thread_task(pool);
+                    thread_task(thread_id, pool);
                 });
             ++pending_tasks_;
         }
@@ -63,7 +63,7 @@ private:
     // 任务队列
     std::queue<TaskType> tasks_;
     // 连接池数量(相当于一个数组，数组中每个元素都是一个连接池指针，与工作线程一一对应)
-    std::vector<ConnectionPool> conn_pool_;
+    std::vector<ConnectionPool*> conn_pools_;
     // 线程池状态控制
     std::atomic<bool> running_;
     std::atomic<size_t> pending_tasks_;

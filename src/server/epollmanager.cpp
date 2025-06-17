@@ -43,42 +43,6 @@ void EpollManager::ETWorkingMode(int active_number)
             HandleNewConnection(sockfd);
             continue;
         }
-        // 有可读事件（如下内容在完成之后应该由子线程处理）
-        /*
-        else if (events_[i].events & EPOLLIN)
-        {
-            Connection *conn = connections_[sockfd];
-            while (true)
-            {
-                ssize_t ret = conn->ReadData();
-                // 获取读取数据结果
-                Connection::Status status = conn->GetStatus();
-                
-                if(status == Connection::Status::ERROR)
-                {
-                    RemoveSocket(sockfd);
-                    break;
-                }
-                else if(status == Connection::Status::WAIT)
-                {
-                    ResetOneShot(sockfd);
-                    break;
-                }
-                else if(status == Connection::Status::CLOSED)
-                {
-                    // 对方关闭连接
-                    RemoveSocket(sockfd);
-                    logger_->info("A connection is shutdown.");
-                    break;
-                }
-                else if(status == Connection::Status::OK)
-                {
-                    // 读取数据
-                    logger_->info("recv message: " + conn->GetRecvBuf());
-                }
-            }
-        }
-        */
     }
 }
 // 处理新连接
@@ -104,14 +68,60 @@ void EpollManager::HandleNewConnection(int sockfd)
         {
             SetNonblocking(connfd);
             // 将 connfd 和 client_address 传给工作线程即可
-            thread_pool_.EnqueueTask([]()
+            thread_pool_.EnqueueTask(
+                [this, sockfd, connfd, client_address]
+                (int thread_id, ConnectionPool& own_pool)
             {
-                // 如何实现？？？
+                // 1. 从工作线程的连接池获取连接对象
+                Connection *conn = own_pool.GetConnection();
+                conn->InitConnection(connfd, client_address);
+
+                // 2. 创建工作线程的epoll实例
+                int worker_epoll = epoll_create(1);
+
+                // 3. 添加连接到工作epoll
+                epoll_event ev;
+                ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+                ev.data.ptr = conn;
+                epoll_ctl(worker_epoll, EPOLL_CTL_ADD, connfd, &ev);
+                // 4.处理读写事件、业务逻辑等...
+                while (true)
+                {
+                    ssize_t ret = conn->ReadData();
+                    // 获取读取数据结果
+                    Connection::Status status = conn->GetStatus();
+
+                    if (status == Connection::Status::ERROR)
+                    {
+                        RemoveSocket(sockfd);
+                        break;
+                    }
+                    else if (status == Connection::Status::WAIT)
+                    {
+                        ResetOneShot(sockfd);
+                        break;
+                    }
+                    else if (status == Connection::Status::CLOSED)
+                    {
+                        // 对方关闭连接
+                        RemoveSocket(sockfd);
+                        logger_->info("A connection is shutdown.");
+                        break;
+                    }
+                    else if (status == Connection::Status::OK)
+                    {
+                        // 读取数据
+                        logger_->info("recv message: " + conn->GetRecvBuf());
+                    }
+                }
+
+                // 5. 清理和归还连接
+                close(worker_epoll);
+                conn->Reset();
+                own_pool.ReleaseConnection(conn);
             });
         }
     }
-    
-
 }
 
 void EpollManager::InitEpoll()

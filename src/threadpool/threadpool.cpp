@@ -1,9 +1,9 @@
 #include "../../include/threadpool.h"
 
-ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<ConnectionPool> conn_pool)
+ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<ConnectionPool*> conn_pools)
     : thread_count_(thread_count),
       max_tasks_size_(max_tasks_size),
-      conn_pool_(std::move(conn_pool)),
+      conn_pools_(std::move(conn_pools)),
       running_(true),
       pending_tasks_(0)
 {
@@ -11,14 +11,18 @@ ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<Connect
     workers_.reserve(thread_count_);
     for (int i = 0; i < thread_count; ++i)
     {
-        workers_.emplace_back(ThreadPool::WorkerThread, this, i);
+        workers_.emplace_back(
+        [this, i]()
+        { 
+            this->WorkerThread(i); 
+        });
     }
 }
 
 void ThreadPool::WorkerThread(int thread_id)
 {
     // 获取当前线程对应的连接池
-    ConnectionPool &own_conn_pool = conn_pool_[thread_id];
+    ConnectionPool *own_conn_pool = conn_pools_[thread_id];
     while (running_)
     {
         TaskType task;
@@ -35,7 +39,7 @@ void ThreadPool::WorkerThread(int thread_id)
             task = std::move(tasks_.front());
             tasks_.pop();
         }
-        task(thread_id, own_conn_pool);
+        task(thread_id, *own_conn_pool);
         --pending_tasks_;
     }
 }

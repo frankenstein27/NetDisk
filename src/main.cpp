@@ -19,17 +19,18 @@ int main(int argc, char *argv[])
     // 通过配置文件获取 连接池数量(线程数)和每个连接池大小
     // 创建 conn_count 个连接池，每个连接池中有 conn_size 个连接实例
     int conn_count = 5, conn_size = 20;
-    std::vector<ConnectionPool> conn_pool;
+    std::vector<ConnectionPool*> conn_pools;
     // 不在此处创建对象，每启动一个线程创建一个对象
     for (ssize_t i = 0; i < conn_count; ++i)
     {
-        conn_pool.emplace_back(ConnectionPool(conn_size));
+        ConnectionPool *conn_pool = new ConnectionPool(conn_size);
+        conn_pools.emplace_back(conn_pool);
     }
     
 
     // 通过配置文件获取线程数(连接池数量) 以及最大任务队列大小 0表示无限制
     int max_tasks_size = 100;
-    ThreadPool thread_pool(conn_count, max_tasks_size, conn_pool);
+    ThreadPool thread_pool(conn_count, max_tasks_size, conn_pools);
 
     // 通过配置文件获取 ip 和 port
     int port = config_loader->GetInt("network.port");
