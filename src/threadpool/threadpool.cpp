@@ -1,63 +1,36 @@
 #include "../../include/threadpool.h"
 
-ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<ConnectionPool*> conn_pools)
+ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<ConnectionPool *> conn_pools)
     : thread_count_(thread_count),
       max_tasks_size_(max_tasks_size),
-      conn_pools_(std::move(conn_pools)),
       running_(true),
-      pending_tasks_(0)
+      next_worker_index_(0)
 {
+
     // 创建工作线程
-    workers_.reserve(thread_count_);
     for (int i = 0; i < thread_count; ++i)
     {
-        workers_.emplace_back(
-        [this, i]()
-        { 
-            this->WorkerThread(i); 
-        });
+        WorkerThread *work = new WorkerThread(i, conn_pools[i]);
+        workers_.push_back(work);
     }
-}
-
-void ThreadPool::WorkerThread(int thread_id)
-{
-    // 获取当前线程对应的连接池
-    ConnectionPool *own_conn_pool = conn_pools_[thread_id];
-    while (running_)
+    for (auto &worker : workers_)
     {
-        TaskType task;
-        {
-            std::unique_lock<std::mutex> lock(mtx_);
-            cv_.wait(lock, [this]
-            {
-                return !tasks_.empty() || !running_;
-            });
-
-            if(!running_)
-                break;
-
-            task = std::move(tasks_.front());
-            tasks_.pop();
-        }
-        task(thread_id, *own_conn_pool);
-        --pending_tasks_;
+        worker->Start();
     }
 }
-
-const size_t ThreadPool::PendingTasks()
+bool ThreadPool::DispatchNewConnection(int connfd, const sockaddr_in &client_addr)
 {
-    return pending_tasks_.load();
-}
+    size_t idx = next_worker_index_.fetch_add(1) % workers_.size();
+    workers_[idx]->AddNewConnection(connfd, client_addr);
+    return true;
 
+}
 
 void ThreadPool::shutdown()
 {
-    // 唤醒所有等待线程
-    cv_.notify_all();
     for (auto& work : workers_)
     {
-        if(work.joinable())
-            work.join();
+        work->Stop();
     }
 }
 

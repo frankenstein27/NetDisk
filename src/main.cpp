@@ -26,7 +26,6 @@ int main(int argc, char *argv[])
         ConnectionPool *conn_pool = new ConnectionPool(conn_size);
         conn_pools.emplace_back(conn_pool);
     }
-    
 
     // 通过配置文件获取线程数(连接池数量) 以及最大任务队列大小 0表示无限制
     int max_tasks_size = 100;
