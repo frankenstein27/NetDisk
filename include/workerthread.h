@@ -12,8 +12,6 @@
 
 #define MAX_EVENTS 64
 
-#define DEBUG std::cout << "thread id: " << std::this_thread::get_id << " funtion: " << __FUNCTION__ << " line: " << __LINE__ << std::endl;
-
 class WorkerThread
 {
 public:

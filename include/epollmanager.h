@@ -17,8 +17,6 @@
 #define MAX_EVENT_NUMBER 1024
 #define BACKLOG 5
 
-#define DEBUG true
-
 class EpollManager
 {
 public:

@@ -23,7 +23,6 @@ bool ThreadPool::DispatchNewConnection(int connfd, const sockaddr_in &client_add
     size_t idx = next_worker_index_.fetch_add(1) % workers_.size();
     workers_[idx]->AddNewConnection(connfd, client_addr);
     return true;
-
 }
 
 void ThreadPool::shutdown()

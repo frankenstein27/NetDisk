@@ -15,7 +15,11 @@ Logger::Logger()
     }
     std::string all_path = std::string(path) + "/logs/netdisk.log";
     logger_ = spdlog::rotating_logger_mt("logger", all_path, max_size, file_size);
-    logger_->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+    // 正常使用的日志格式
+    // logger_->set_pattern("[%Y-%m-%d %H:%M:%S.%e] proc:[%P] thread:[%t] [%l] %v");
+
+    // 调试用日志格式
+    logger_->set_pattern("[%H:%M:%S.%e] proc:[%P] thread:[%t] [%l] %v");
     logger_->set_level(spdlog::level::trace);
     spdlog::flush_every(std::chrono::seconds(3));
 }
