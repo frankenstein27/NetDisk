@@ -38,8 +38,9 @@ int main(int argc, char *argv[])
     EpollManager *epoll_manager = new EpollManager(true, ip, port, thread_pool);
     epoll_manager->WaitEvents();
 
-
-    delete logger;
+    delete epoll_manager;
     delete config_loader;
+    delete logger;
+
     return 0;
 }

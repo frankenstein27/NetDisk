@@ -6,7 +6,6 @@ ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<Connect
       running_(true),
       next_worker_index_(0)
 {
-
     // 创建工作线程
     for (int i = 0; i < thread_count; ++i)
     {
@@ -18,6 +17,7 @@ ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<Connect
         worker->Start();
     }
 }
+
 bool ThreadPool::DispatchNewConnection(int connfd, const sockaddr_in &client_addr)
 {
     size_t idx = next_worker_index_.fetch_add(1) % workers_.size();
@@ -40,4 +40,9 @@ ThreadPool::~ThreadPool()
         running_ = false;
         shutdown();
     }
+    for (size_t i = 0; i < thread_count_; ++i)
+    {
+        delete workers_[i];
+    }
+    workers_.clear();
 }

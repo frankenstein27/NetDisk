@@ -251,4 +251,5 @@ WorkerThread::~WorkerThread()
         close(epoll_fd_);
         epoll_fd_ = -1;
     }
+    delete conn_pool_;
 }

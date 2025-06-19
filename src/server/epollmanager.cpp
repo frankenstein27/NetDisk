@@ -1,5 +1,7 @@
 #include "../../include/epollmanager.h"
 
+int EpollManager::pipefd_[2] = {-1, -1};
+
 EpollManager::EpollManager(bool enable_et, std::string ip, uint16_t port, ThreadPool& thread_pool)
  :  enable_et_(enable_et),
     running_(false),
@@ -28,6 +30,7 @@ void EpollManager::WaitEvents()
         }
         ETWorkingMode(ret);
     }
+    StopServer();
 }
 
 void EpollManager::ETWorkingMode(int active_number)
@@ -37,11 +40,50 @@ void EpollManager::ETWorkingMode(int active_number)
     {
         logger_->trace("active_number: " + std::to_string(active_number));
         int sockfd = events_[i].data.fd;
-        // 有新连接请求
+        // 处理新连接请求
         if (sockfd == listen_fd_)
         {
             HandleNewConnection(sockfd);
             continue;
+        }
+        // 处理信号事件
+        else if((sockfd == pipefd_[0]) && (events_[i].events & EPOLLIN))
+        {
+            int sig;
+            char signals[1024];
+            int ret = recv(pipefd_[0], signals, sizeof(signals), 0);
+            if(-1 == ret)
+            {
+                continue;
+            }
+            else if(!ret)
+            {
+                continue;
+            }
+            else
+            {
+                for (int i = 0; i < ret; ++i)
+                {
+                    switch (signals[i])
+                    {
+                    case SIGINT:
+                        logger_->warn("recv a SIGINT Signal, shutdown server!");
+                        running_ = false;
+                        break;
+                    case SIGHUP:
+                        logger_->warn("recv a SIGHUP Signal.");
+                        break;
+                    case SIGTERM:
+                        logger_->warn("recv a SIGTERM Signal.");
+                        break;
+                    case SIGCHLD:
+                        logger_->warn("recv a SIGINT SIGCHLD.");
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
         }
     }
 }
@@ -78,7 +120,18 @@ void EpollManager::InitEpoll()
     // 创建 epoll 实例，得到其在内核事件表中的标识符（epoll_fd_）
     epoll_fd_ = epoll_create(1);
     // 将当前服务器监听的文件描述符加入到内核事件表中，且设置为ET模式、非阻塞IO，且不开启EPOLLONESHOT 模式
-    AddSocked(listen_fd_, address_);
+    SetNonblocking(listen_fd_);
+    AddSocked(listen_fd_);
+    // 创建管道
+    socketpair(PF_UNIX, SOCK_STREAM, 0, pipefd_);
+    // 注册pipefd_[0]上的可读事件
+    SetNonblocking(pipefd_[1]);
+    AddSocked(pipefd_[0]);
+    // 注册要处理的信号
+    AddSig(SIGINT);
+    AddSig(SIGHUP);
+    AddSig(SIGTERM);
+    AddSig(SIGCHLD);
     running_ = true;
 }
 
@@ -111,12 +164,35 @@ void EpollManager::InitServer(int port, std::string ip)
     ret = listen(listen_fd_, BACKLOG);
     assert(-1 != ret);
 }
-
-
-void EpollManager::AddSocked(int fd, sockaddr_in& addr)
+void EpollManager::StopServer()
 {
-    SetNonblocking(fd);
-    // 如果是监听 socket ，不设置 oneshot 且无需创建 Connection对象
+    // 停止其他线程并等待退出
+    thread_pool_.shutdown();
+    running_ = false;
+}
+
+void EpollManager::SigHandler(int sig)
+{
+    // 保留原本的errno，在函数最后恢复，保证函数的可重入性（但在此处没有必要）
+    int old_errno = errno;
+    int msg = sig;
+    // 将信号值写入管道，通知 WaitEvents 循环
+    send(pipefd_[1], (char *)msg, 1, 0);
+    errno = old_errno;
+}
+
+void EpollManager::AddSig(int sig)
+{
+    struct sigaction sa;
+    memset((void *)&sa, '\0', sizeof(sa));
+    sa.sa_handler = SigHandler;
+    sa.sa_flags |= SA_RESTART;
+    sigfillset(&sa.sa_mask);
+    sigaction(sig, &sa, nullptr);
+}
+
+void EpollManager::AddSocked(int fd)
+{
     epoll_event event;
     event.data.fd = fd;
     event.events = EPOLLIN;
@@ -151,5 +227,7 @@ int EpollManager::SetNonblocking(int fd)
 
 EpollManager::~EpollManager()
 {
-    running_ = false;
+    close(pipefd_[0]);
+    close(pipefd_[1]);
+    close(epoll_fd_);
 }

@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <unordered_map>
@@ -24,19 +25,26 @@ public:
     ~EpollManager();
 
     // event 指定事件类型，一般为EPOLLIN (+ EPOLLET)
-    void AddSocked(int fd, sockaddr_in &addr);
+    void AddSocked(int fd);
     void ResetOneShot(int fd);
     void RemoveSocket(int fd);
     void ETWorkingMode(int active_number);
     void WaitEvents();
 
 private:
+    // 统一事件源：主要用于安全结束服务器程序
+    // 信号处理函数
+    static void SigHandler(int sig);
+    // 设置信号的处理函数
+    void AddSig(int sig);
     int SetNonblocking(int fd);
     void InitEpoll();
     void InitServer(int port, std::string ip);
     void HandleNewConnection(int sockfd);
+    void StopServer();
 
 private:
+    static int pipefd_[2];
     struct sockaddr_in address_;
     int listen_fd_;
     std::shared_ptr<spdlog::logger> logger_;

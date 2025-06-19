@@ -7,7 +7,6 @@ Connection::Connection()
 {
     if (!logger_)
         logger_ = spdlog::get("logger");
-    recv_buf_ = new char[BUFFER_SIZE];
     send_buf_ = new char[BUFFER_SIZE];
 }
 
