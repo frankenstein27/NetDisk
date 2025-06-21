@@ -139,6 +139,5 @@ int Connection::SetNoblocking()
 Connection::~Connection()
 {
     close(sockfd_);
-    
     delete[] send_buf_;
 }
