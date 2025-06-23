@@ -1,11 +1,11 @@
 #include <stdio.h>
 
-#include "../include/config_loader.h"
-#include "../include/logger.h"
-#include "../include/connection.h"
-#include "../include/connectionpool.h"
-#include "../include/threadpool.h"
-#include "../include/epollmanager.h"
+#include "./utils/config_loader.h"
+#include "./utils/logger.h"
+#include "./server/connection.h"
+#include "./server/connectionpool.h"
+#include "./threadpool/threadpool.h"
+#include "./server/epollmanager.h"
 
 
 int main(int argc, char *argv[])

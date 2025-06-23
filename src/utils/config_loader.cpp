@@ -1,4 +1,4 @@
-#include "../../include/config_loader.h"
+#include "./config_loader.h"
 
 // 必须初始化静态成员变量
 ConfigLoader *ConfigLoader::p_configloader_ = nullptr;

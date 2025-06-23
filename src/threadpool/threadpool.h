@@ -2,7 +2,7 @@
 
 #include <queue>
 #include <vector>
-#include "./connectionpool.h"
+#include "../server/connectionpool.h"
 #include "./workerthread.h"
 
 class ThreadPool

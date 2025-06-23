@@ -1,4 +1,4 @@
-#include "../../include/threadpool.h"
+#include "threadpool.h"
 
 ThreadPool::ThreadPool(int thread_count, int max_tasks_size, std::vector<ConnectionPool *> conn_pools)
     : thread_count_(thread_count),

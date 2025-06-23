@@ -1,4 +1,4 @@
-#include "../../include/connection.h"
+#include "connection.h"
 
 #include <unistd.h>
 #include <fcntl.h>

@@ -18,12 +18,17 @@ include_directories(./include)
 include_directories(./include/third_lib/spdlog)
 
 # 获取某目录下的所有源文件
-aux_source_directory(./src MAIN)
-aux_source_directory(./src/utils UTILS)
+aux_source_directory(./src/biz BIZ)
+aux_source_directory(./src/db DB)
+aux_source_directory(./src/protocol PROTOCOL)
 aux_source_directory(./src/server SERVER)
+aux_source_directory(./src/storage STORAGE)
 aux_source_directory(./src/threadpool THREADPOOL)
+aux_source_directory(./src/timer TIMER)
+aux_source_directory(./src/utils UTILS)
+aux_source_directory(./src MAIN)
 
 
 
 # 生成 Makefile
-add_executable(netdisk.out ${MAIN} ${UTILS} ${SERVER} ${THREADPOOL})
+add_executable(netdisk.out ${BIZ} ${DB} ${PROTOCOL} ${SERVER} ${STORAGE} ${THREADPOOL} ${TIMER} ${UTILS} ${MAIN})

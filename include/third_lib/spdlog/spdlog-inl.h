@@ -60,7 +60,7 @@ SPDLOG_INLINE void register_logger(std::shared_ptr<logger> logger) {
 }
 
 SPDLOG_INLINE void register_or_replace(std::shared_ptr<logger> logger) {
-    details::registry::instance().register_or_replace(std::move(logger));
+    details::registry::instance().register_logger(std::move(logger));
 }
 
 SPDLOG_INLINE void apply_all(const std::function<void(std::shared_ptr<logger>)> &fun) {

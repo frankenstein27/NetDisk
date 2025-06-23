@@ -1,4 +1,4 @@
-#include "../../include/workerthread.h"
+#include "workerthread.h"
 
 #include <unistd.h>
 #include <fcntl.h>

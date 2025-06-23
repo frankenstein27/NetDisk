@@ -6,9 +6,9 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
-#include "./connectionpool.h"
-#include "./connection.h"
-#include "./logger.h"
+#include "../server/connectionpool.h"
+#include "../server/connection.h"
+#include "../utils/logger.h"
 
 #define MAX_EVENTS 64
 

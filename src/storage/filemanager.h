@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "./user.h"
+#include "../biz/user.h"
 
 class FileManager
 {

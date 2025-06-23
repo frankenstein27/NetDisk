@@ -2,7 +2,7 @@
 
 #include "./httprequest.h"
 #include "./httpresponse.h"
-#include "./connection.h"
+#include "../server/connection.h"
 
 class HttpParser
 {
