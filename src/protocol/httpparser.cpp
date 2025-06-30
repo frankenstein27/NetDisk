@@ -62,7 +62,36 @@ std::string HttpParser::BuildResponse(const HttpResponse &res)
 
 HttpParser::LINE_STATE HttpParser::ParseLine(const char *buffer, int &checked_index, int &read_index)
 {
-
+    for (; checked_index < read_index; ++checked_index)
+    {
+        char ch = buffer[checked_index];
+        if(ch == CR)
+        {
+            // 如果已经是最后一个字符，则数据不完整
+            if(checked_index + 1 >= read_index)
+            {
+                return LINE_STATE::LINE_OPEN;
+            }
+            if(buffer[checked_index + 1] == LF)
+            {
+                // 跳过CRLF
+                checked_index += 2;
+                return LINE_STATE::LINE_OK;
+            }
+            else
+            {
+                // 行有语法错误
+                return LINE_STATE::LINE_BAD;
+            }
+        }
+        // LF 不在 CR 后面
+        else if(ch == LF)
+        {
+            return LINE_STATE::LINE_BAD;
+        }
+    }
+    // 未找到完整的行
+    return LINE_STATE::LINE_OPEN;
 }
 
 HttpParser::HTTP_CODE HttpParser::ParseRequestLine(const char *temp, CHECK_STATE &checkstate)
@@ -125,7 +154,7 @@ HttpParser::HTTP_CODE HttpParser::ParseContent(const char *buffer,
         }
     }
     // 没有读到一个完整的行
-    if(line_status == LINE_STATE::LINE_OPNE)
+    if(line_status == LINE_STATE::LINE_OPEN)
     {
         return HTTP_CODE::NO_REQUEST;
     }
