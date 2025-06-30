@@ -117,7 +117,7 @@ HttpParser::HTTP_CODE HttpParser::ParseContent(const char *buffer,
             // 第三种状态：分析请求数据
         case CHECK_STATE::CHECK_STATE_CONTENT:
         // 调用正文分析函数
-        ret_code = ParseContent(tmp, checked_index, checkstate, read_index, start_line);
+        // ......
         // if(ret_code == ...)
         // ......
 
