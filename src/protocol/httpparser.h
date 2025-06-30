@@ -49,18 +49,18 @@ private:
     /// @param checked_index    当前正在分析的字节
     /// @param read_index   数据尾部的下一字节
     /// @return 从状态机解析完成的状态
-    LINE_STATE ParseLine(char *buffer, int &checked_index, int &read_index);
+    LINE_STATE ParseLine(const char *buffer, int &checked_index, int &read_index);
 
     /// @brief 主状态机，分析请求行(和消息体)
     /// @param temp 请求行内容
     /// @param checkstate 状态机当前状态
     /// @return 请求行的结果
-    HTTP_CODE ParseRequestLine(char *temp, CHECK_STATE &checkstate);
+    HTTP_CODE ParseRequestLine(const char *temp, CHECK_STATE &checkstate);
 
     /// @brief 分析头部字段
     /// @param temp 头部字段内容
     /// @return 分析请求头部的结果
-    HTTP_CODE ParseHeaders(char *temp);
+    HTTP_CODE ParseHeaders(const char *temp);
 
     /// @brief 分析 HTTP 请求的入口函数
     /// @param buffer 读缓冲区
@@ -69,7 +69,7 @@ private:
     /// @param read_index 读缓冲区尾部下一字节
     /// @param start_line 行在buffer中的起始位置
     /// @return
-    HTTP_CODE ParseContent(char *buffer, int &checked_index, CHECK_STATE &checkstate, int &read_index, int &start_line);
+    HTTP_CODE ParseContent(const char *buffer, int &checked_index, CHECK_STATE &checkstate, int &read_index, int &start_line);
 
 private:
 };
